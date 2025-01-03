@@ -1,24 +1,31 @@
 package com.example.smartguard;
 
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
+import com.example.smartguard.R;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+
+        // Referenzen zu UI-Elementen
+        Button networkMonitorButton = findViewById(R.id.btn_network_monitor);
+        Button permissionAnalyzerButton = findViewById(R.id.btn_permission_analyzer);
+        TextView statusText = findViewById(R.id.log_status);
+
+        // Klick-Listener für Netzwerküberwachung
+        networkMonitorButton.setOnClickListener(v ->
+                statusText.setText("Netzwerküberwachung gestartet"));
+
+        // Klick-Listener für Berechtigungsanalyse
+        permissionAnalyzerButton.setOnClickListener(v ->
+                statusText.setText("Berechtigungsanalyse gestartet"));
     }
 }
