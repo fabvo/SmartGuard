@@ -5,6 +5,7 @@ import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -110,36 +111,27 @@ public class NetworkMonitorFragment extends Fragment {
             StringBuilder statsBuilder = new StringBuilder();
             statsBuilder.append("Fetching network usage data...\n");
 
-            // Fetch WLAN Data
-            statsBuilder.append("\nWLAN Data:\n");
-            NetworkStats networkStatsWlan = networkStatsManager.querySummary(
-                    NetworkStats.Bucket.DEFAULT_NETWORK_ALL,
-                    null, // Für WLAN ist subscriberId null
-                    0,    // Startzeit (keine Einschränkung)
-                    System.currentTimeMillis()
-            );
-            appendNetworkStats(networkStatsWlan, statsBuilder);
+            long startTime = 0; // Startzeit: Keine Einschränkung
+            long endTime = System.currentTimeMillis();
 
-            // Fetch Mobile Data
-            statsBuilder.append("\nMobile Data:\n");
-            String subscriberId = null;
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                TelephonyManager telephonyManager = (TelephonyManager) requireContext().getSystemService(Context.TELEPHONY_SERVICE);
-                try {
-                    subscriberId = telephonyManager.getSubscriberId();
-                } catch (SecurityException e) {
-                    Log.e(TAG, "Unable to fetch subscriberId: " + e.getMessage());
-                }
-            }
-            NetworkStats networkStatsMobile = networkStatsManager.querySummary(
-                    NetworkStats.Bucket.DEFAULT_NETWORK_ALL,
-                    subscriberId,
-                    0,    // Startzeit (keine Einschränkung)
-                    System.currentTimeMillis()
-            );
-            appendNetworkStats(networkStatsMobile, statsBuilder);
+            // **WLAN-Daten für das Gerät abrufen**
+            statsBuilder.append("\nWLAN Data (Device):\n");
+            long wifiDeviceUsage = getDeviceNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime);
+            statsBuilder.append("Downloaded + Uploaded: ").append(wifiDeviceUsage).append(" Bytes\n");
 
-            // Display result
+            // **Mobile Daten für das Gerät abrufen**
+            statsBuilder.append("\nMobile Data (Device):\n");
+            long mobileDeviceUsage = getDeviceNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime);
+            statsBuilder.append("Downloaded + Uploaded: ").append(mobileDeviceUsage).append(" Bytes\n");
+
+            // **Daten für einzelne Apps abrufen**
+            statsBuilder.append("\nWLAN Data (Apps):\n");
+            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime, statsBuilder);
+
+            statsBuilder.append("\nMobile Data (Apps):\n");
+            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime, statsBuilder);
+
+            // Ergebnis anzeigen
             networkInfoTextView.setText(statsBuilder.toString());
             Log.d(TAG, "Network usage data:\n" + statsBuilder.toString());
 
@@ -148,38 +140,45 @@ public class NetworkMonitorFragment extends Fragment {
         }
     }
 
-    private void appendNetworkStats(NetworkStats networkStats, StringBuilder statsBuilder) throws Exception {
-        if (networkStats == null) {
-            statsBuilder.append("No data available.\n");
-            return;
+    // **Daten des gesamten Geräts abrufen**
+    private long getDeviceNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime) {
+        try {
+            NetworkStats.Bucket bucket = networkStatsManager.querySummaryForDevice(networkType, null, startTime, endTime);
+            long totalUsage = bucket.getRxBytes() + bucket.getTxBytes();
+            Log.d(TAG, "Device total usage: " + totalUsage + " Bytes for networkType: " + networkType);
+            return totalUsage;
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching device network usage: " + e.getMessage());
+            return 0;
         }
-
-        NetworkStats.Bucket bucket = new NetworkStats.Bucket();
-        int bucketCount = 0; // Zähler für die Anzahl der Buckets
-        while (networkStats.hasNextBucket()) {
-            networkStats.getNextBucket(bucket);
-
-            int uid = bucket.getUid();
-            long rxBytes = bucket.getRxBytes();
-            long txBytes = bucket.getTxBytes();
-
-            Log.d(TAG, "Bucket " + bucketCount + ": UID: " + uid + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
-            bucketCount++;
-
-            if (rxBytes > 0 || txBytes > 0) {
-                statsBuilder.append("UID: ").append(uid)
-                        .append(", Downloaded: ").append(rxBytes)
-                        .append(" Bytes, Uploaded: ").append(txBytes)
-                        .append(" Bytes\n");
-            }
-        }
-
-        if (bucketCount == 0) {
-            statsBuilder.append("No buckets found.\n");
-        }
-        Log.d(TAG, "Total Buckets Processed: " + bucketCount);
     }
 
+    // **Daten für einzelne Apps abrufen**
+    private void getAppNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime, StringBuilder statsBuilder) {
+        try {
+            NetworkStats networkStats = networkStatsManager.querySummary(networkType, null, startTime, endTime);
+            NetworkStats.Bucket bucket = new NetworkStats.Bucket();
+
+            while (networkStats.hasNextBucket()) {
+                networkStats.getNextBucket(bucket);
+                int uid = bucket.getUid();
+                long rxBytes = bucket.getRxBytes();
+                long txBytes = bucket.getTxBytes();
+
+                if (rxBytes > 0 || txBytes > 0) {
+                    statsBuilder.append("UID: ").append(uid)
+                            .append(", Downloaded: ").append(rxBytes)
+                            .append(" Bytes, Uploaded: ").append(txBytes)
+                            .append(" Bytes\n");
+                    Log.d(TAG, "App UID: " + uid + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching app network usage: " + e.getMessage());
+        }
+    }
+
+    // **Berechtigungsprüfung**
     private boolean isUsageStatsPermissionGranted() {
         AppOpsManager appOps = (AppOpsManager) requireContext().getSystemService(Context.APP_OPS_SERVICE);
         int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
