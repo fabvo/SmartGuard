@@ -3,13 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".HomeFragment">
+    tools:context=".PermissionAnalyzerFragment">
 
     <TextView
+        android:id="@+id/permissionsTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Permission Analyzer Fragment"
-        android:textSize="25dp"
-        android:layout_centerInParent="true"/>
+        android:text="Permission Analyzer"
+        android:textSize="25sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:layout_alignParentTop="true"/>
+
+    <ListView
+        android:id="@+id/permissionsListView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/permissionsTitle"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="0.5dp"
+        android:padding="8dp" />
 
 </RelativeLayout>
