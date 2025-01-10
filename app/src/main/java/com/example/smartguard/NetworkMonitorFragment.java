@@ -5,32 +5,29 @@ import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import android.Manifest;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-import android.content.pm.PackageManager;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class NetworkMonitorFragment extends Fragment {
 
     private static final String TAG = "NetworkMonitor";
-    private static final int REQUEST_READ_PHONE_STATE = 100;
-    private TextView networkInfoTextView;
 
     @Nullable
     @Override
@@ -42,101 +39,25 @@ public class NetworkMonitorFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        Log.d(TAG, "onViewCreated called");
-        networkInfoTextView = view.findViewById(R.id.network_info);
+        ListView listView = view.findViewById(R.id.networkUsageListView);
+        List<String> usageList = new ArrayList<>();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!isUsageStatsPermissionGranted()) {
-                Log.e(TAG, "Usage stats permission not granted. Redirecting to settings.");
-                startActivity(new Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS));
-                return;
-            }
+            NetworkStatsManager networkStatsManager =
+                    (NetworkStatsManager) requireContext().getSystemService(Context.NETWORK_STATS_SERVICE);
 
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_PHONE_STATE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "READ_PHONE_STATE permission not granted.");
-                if (ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.READ_PHONE_STATE)) {
-                    Log.d(TAG, "Showing permission rationale.");
-                    ActivityCompat.requestPermissions(requireActivity(),
-                            new String[]{Manifest.permission.READ_PHONE_STATE},
-                            REQUEST_READ_PHONE_STATE);
-                } else {
-                    Log.d(TAG, "Permission permanently denied or first request. Redirecting to settings.");
-                    networkInfoTextView.setText("Permission denied. Please enable it in settings.");
-                    startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", requireContext().getPackageName(), null)));
-                }
-            } else {
-                Log.d(TAG, "Permissions granted. Fetching network usage.");
-                getNetworkUsage();
-            }
-
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == REQUEST_READ_PHONE_STATE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "READ_PHONE_STATE permission granted. Fetching network usage.");
-                getNetworkUsage();
-            } else {
-                Log.e(TAG, "READ_PHONE_STATE permission denied.");
-                networkInfoTextView.setText("Permission denied. Unable to fetch network usage data.");
-            }
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private void getNetworkUsage() {
-        Log.d(TAG, "getNetworkUsage called");
-
-        if (!isUsageStatsPermissionGranted()) {
-            Log.e(TAG, "Usage stats permission not granted. Redirecting to settings.");
-            startActivity(new Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS));
-            return;
-        }
-
-        NetworkStatsManager networkStatsManager =
-                (NetworkStatsManager) requireContext().getSystemService(Context.NETWORK_STATS_SERVICE);
-
-        if (networkStatsManager == null) {
-            Log.e(TAG, "NetworkStatsManager is not available.");
-            return;
-        }
-
-        try {
-            StringBuilder statsBuilder = new StringBuilder();
-            statsBuilder.append("Fetching network usage data...\n");
-
-            long startTime = 0; // Startzeit: Keine Einschränkung
+            long startTime = 0;
             long endTime = System.currentTimeMillis();
 
-            // **WLAN-Daten für das Gerät abrufen**
-            statsBuilder.append("\nWLAN Data (Device):\n");
-            long wifiDeviceUsage = getDeviceNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime);
-            statsBuilder.append("Downloaded + Uploaded: ").append(wifiDeviceUsage).append(" Bytes\n");
+            // WLAN-Daten abrufen
+            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime, usageList);
 
-            // **Mobile Daten für das Gerät abrufen**
-            statsBuilder.append("\nMobile Data (Device):\n");
-            long mobileDeviceUsage = getDeviceNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime);
-            statsBuilder.append("Downloaded + Uploaded: ").append(mobileDeviceUsage).append(" Bytes\n");
+            // Mobile Daten abrufen
+            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime, usageList);
 
-            // **Daten für einzelne Apps abrufen**
-            statsBuilder.append("\nWLAN Data (Apps):\n");
-            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime, statsBuilder);
-
-            statsBuilder.append("\nMobile Data (Apps):\n");
-            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime, statsBuilder);
-
-            // Ergebnis anzeigen
-            networkInfoTextView.setText(statsBuilder.toString());
-            Log.d(TAG, "Network usage data:\n" + statsBuilder.toString());
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error fetching network statistics: " + e.getMessage(), e);
+            // Daten an Adapter binden
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, usageList);
+            listView.setAdapter(adapter);
         }
     }
 
@@ -154,7 +75,7 @@ public class NetworkMonitorFragment extends Fragment {
     }
 
     // **Daten für einzelne Apps abrufen**
-    private void getAppNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime, StringBuilder statsBuilder) {
+    private void getAppNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime, List<String> usageList) {
         try {
             NetworkStats networkStats = networkStatsManager.querySummary(networkType, null, startTime, endTime);
             NetworkStats.Bucket bucket = new NetworkStats.Bucket();
@@ -166,17 +87,46 @@ public class NetworkMonitorFragment extends Fragment {
                 long txBytes = bucket.getTxBytes();
 
                 if (rxBytes > 0 || txBytes > 0) {
-                    statsBuilder.append("UID: ").append(uid)
-                            .append(", Downloaded: ").append(rxBytes)
-                            .append(" Bytes, Uploaded: ").append(txBytes)
-                            .append(" Bytes\n");
-                    Log.d(TAG, "App UID: " + uid + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
+                    String appName = getAppNameForUid(uid);
+                    String usageData = appName + " - Downloaded: " + rxBytes + " Bytes, Uploaded: " + txBytes + " Bytes";
+                    usageList.add(usageData);
+                    Log.d(TAG, "App: " + appName + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, "Error fetching app network usage: " + e.getMessage());
         }
     }
+
+    // **UID in App-Namen auflösen**
+    private String getAppNameForUid(int uid) {
+        try {
+            String[] packageNames = requireContext().getPackageManager().getPackagesForUid(uid);
+            if (packageNames != null && packageNames.length > 0) {
+                // Hole den App-Namen
+                return requireContext().getPackageManager().getApplicationLabel(
+                        requireContext().getPackageManager().getApplicationInfo(packageNames[0], 0)).toString();
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.w(TAG, "Package name not found for UID: " + uid, e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error resolving app name for UID: " + uid, e);
+        }
+
+        // Fallback für unbekannte UID-Werte
+        if (uid == android.os.Process.SYSTEM_UID) {
+            return "Android System";
+        } else if (uid == android.os.Process.PHONE_UID) {
+            return "Phone Service";
+        } else if (uid >= 1000 && uid < 2000) {
+            return "Core Android Service (UID " + uid + ")";
+        } else if (uid >= 2000 && uid < 3000) {
+            return "System App (UID " + uid + ")";
+        } else {
+            return "Unknown App (UID " + uid + ")";
+        }
+    }
+
 
     // **Berechtigungsprüfung**
     private boolean isUsageStatsPermissionGranted() {
