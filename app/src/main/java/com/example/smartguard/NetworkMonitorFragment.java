@@ -4,7 +4,6 @@ import android.app.AppOpsManager;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.Build;
@@ -19,8 +18,10 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Spinner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,9 @@ import java.util.List;
 public class NetworkMonitorFragment extends Fragment {
 
     private static final String TAG = "NetworkMonitor";
+    private ListView listView;
+    private List<String> usageList;
+    private ArrayAdapter<String> adapter;
 
     @Nullable
     @Override
@@ -39,42 +43,58 @@ public class NetworkMonitorFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ListView listView = view.findViewById(R.id.networkUsageListView);
-        List<String> usageList = new ArrayList<>();
+        listView = view.findViewById(R.id.networkUsageListView);
+        Spinner timeFilterSpinner = view.findViewById(R.id.timeFilterSpinner);
+        usageList = new ArrayList<>();
+        adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, usageList);
+        listView.setAdapter(adapter);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             NetworkStatsManager networkStatsManager =
                     (NetworkStatsManager) requireContext().getSystemService(Context.NETWORK_STATS_SERVICE);
 
-            long startTime = 0;
-            long endTime = System.currentTimeMillis();
+            ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
+                    requireContext(),
+                    R.array.time_filter_options,
+                    android.R.layout.simple_spinner_item
+            );
+            spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            timeFilterSpinner.setAdapter(spinnerAdapter);
 
-            // WLAN-Daten abrufen
-            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, endTime, usageList);
+            timeFilterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    String selectedFilter = (String) parent.getItemAtPosition(position);
+                    long currentTime = System.currentTimeMillis();
+                    long startTime = calculateStartTime(selectedFilter, currentTime);
 
-            // Mobile Daten abrufen
-            getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, endTime, usageList);
+                    usageList.clear();
+                    getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime, usageList);
+                    getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime, usageList);
+                    adapter.notifyDataSetChanged();
+                }
 
-            // Daten an Adapter binden
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, usageList);
-            listView.setAdapter(adapter);
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                }
+            });
         }
     }
 
-    // **Daten des gesamten Geräts abrufen**
-    private long getDeviceNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime) {
-        try {
-            NetworkStats.Bucket bucket = networkStatsManager.querySummaryForDevice(networkType, null, startTime, endTime);
-            long totalUsage = bucket.getRxBytes() + bucket.getTxBytes();
-            Log.d(TAG, "Device total usage: " + totalUsage + " Bytes for networkType: " + networkType);
-            return totalUsage;
-        } catch (Exception e) {
-            Log.e(TAG, "Error fetching device network usage: " + e.getMessage());
-            return 0;
+    private long calculateStartTime(String filter, long currentTime) {
+        switch (filter) {
+            case "Die letzte Stunde":
+                return currentTime - (60 * 60 * 1000); // 1 Stunde
+            case "Die letzten 24 Stunden":
+                return currentTime - (24 * 60 * 60 * 1000); // 24 Stunden
+            case "Die letzte Woche":
+                return currentTime - (7 * 24 * 60 * 60 * 1000); // 7 Tage
+            case "Insgesamt":
+            default:
+                return 0; // Gesamtdaten
         }
     }
 
-    // **Daten für einzelne Apps abrufen**
     private void getAppNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime, List<String> usageList) {
         try {
             NetworkStats networkStats = networkStatsManager.querySummary(networkType, null, startTime, endTime);
@@ -88,7 +108,8 @@ public class NetworkMonitorFragment extends Fragment {
 
                 if (rxBytes > 0 || txBytes > 0) {
                     String appName = getAppNameForUid(uid);
-                    String usageData = appName + " - Downloaded: " + rxBytes + " Bytes, Uploaded: " + txBytes + " Bytes";
+                    String usageData = appName + " - Downloaded: " + formatDataSize(rxBytes) +
+                            ", Uploaded: " + formatDataSize(txBytes);
                     usageList.add(usageData);
                     Log.d(TAG, "App: " + appName + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
                 }
@@ -98,14 +119,14 @@ public class NetworkMonitorFragment extends Fragment {
         }
     }
 
-    // **UID in App-Namen auflösen**
     private String getAppNameForUid(int uid) {
+        PackageManager packageManager = requireContext().getPackageManager();
         try {
-            String[] packageNames = requireContext().getPackageManager().getPackagesForUid(uid);
+            String[] packageNames = packageManager.getPackagesForUid(uid);
             if (packageNames != null && packageNames.length > 0) {
-                // Hole den App-Namen
-                return requireContext().getPackageManager().getApplicationLabel(
-                        requireContext().getPackageManager().getApplicationInfo(packageNames[0], 0)).toString();
+                String packageName = packageNames[0];
+                return packageManager.getApplicationLabel(
+                        packageManager.getApplicationInfo(packageName, 0)).toString();
             }
         } catch (PackageManager.NameNotFoundException e) {
             Log.w(TAG, "Package name not found for UID: " + uid, e);
@@ -113,7 +134,10 @@ public class NetworkMonitorFragment extends Fragment {
             Log.e(TAG, "Error resolving app name for UID: " + uid, e);
         }
 
-        // Fallback für unbekannte UID-Werte
+        return getFallbackAppName(uid);
+    }
+
+    private String getFallbackAppName(int uid) {
         if (uid == android.os.Process.SYSTEM_UID) {
             return "Android System";
         } else if (uid == android.os.Process.PHONE_UID) {
@@ -127,14 +151,15 @@ public class NetworkMonitorFragment extends Fragment {
         }
     }
 
-
-    // **Berechtigungsprüfung**
-    private boolean isUsageStatsPermissionGranted() {
-        AppOpsManager appOps = (AppOpsManager) requireContext().getSystemService(Context.APP_OPS_SERVICE);
-        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(), requireContext().getPackageName());
-        boolean granted = (mode == AppOpsManager.MODE_ALLOWED);
-        Log.d(TAG, "Usage stats permission granted: " + granted);
-        return granted;
+    private String formatDataSize(long bytes) {
+        if (bytes >= 1_073_741_824) { // 1 GB
+            return String.format("%.2f GB", bytes / 1_073_741_824.0);
+        } else if (bytes >= 1_048_576) { // 1 MB
+            return String.format("%.2f MB", bytes / 1_048_576.0);
+        } else if (bytes >= 1024) { // 1 KB
+            return String.format("%.2f KB", bytes / 1024.0);
+        } else {
+            return bytes + " Bytes";
+        }
     }
 }
