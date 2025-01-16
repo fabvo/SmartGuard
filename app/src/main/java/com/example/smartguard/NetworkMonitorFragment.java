@@ -1,13 +1,14 @@
 package com.example.smartguard;
 
-import android.app.AppOpsManager;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -24,7 +25,9 @@ import android.widget.ListView;
 import android.widget.Spinner;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NetworkMonitorFragment extends Fragment {
 
@@ -69,8 +72,20 @@ public class NetworkMonitorFragment extends Fragment {
                     long startTime = calculateStartTime(selectedFilter, currentTime);
 
                     usageList.clear();
-                    getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime, usageList);
-                    getAppNetworkUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime, usageList);
+                    // Hier holen wir uns alle Apps mit deren Netzwerkdaten
+                    Map<Integer, AppUsage> appUsageMap = findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
+                    appUsageMap.putAll(findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime));
+
+                    // Anzeige aller Apps inklusive ihrer UIDs und Netzwerkdaten
+                    for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
+                        String appName = getAppNameForUid(entry.getKey(), requireContext());
+                        AppUsage usage = entry.getValue();
+                        String usageData = "UID: " + entry.getKey() + " - App: " + appName + " - Downloaded: " + formatDataSize(usage.rxBytes) +
+                                ", Uploaded: " + formatDataSize(usage.txBytes);
+                        usageList.add(usageData);
+                        Log.d(TAG, "UID: " + entry.getKey() + ", App: " + appName + ", RxBytes: " + usage.rxBytes + ", TxBytes: " + usage.txBytes);
+                    }
+
                     adapter.notifyDataSetChanged();
                 }
 
@@ -95,7 +110,9 @@ public class NetworkMonitorFragment extends Fragment {
         }
     }
 
-    private void getAppNetworkUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime, List<String> usageList) {
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public Map<Integer, AppUsage> findAppDataUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime) {
+        Map<Integer, AppUsage> appUsageMap = new HashMap<>();
         try {
             NetworkStats networkStats = networkStatsManager.querySummary(networkType, null, startTime, endTime);
             NetworkStats.Bucket bucket = new NetworkStats.Bucket();
@@ -107,48 +124,36 @@ public class NetworkMonitorFragment extends Fragment {
                 long txBytes = bucket.getTxBytes();
 
                 if (rxBytes > 0 || txBytes > 0) {
-                    String appName = getAppNameForUid(uid);
-                    String usageData = appName + " - Downloaded: " + formatDataSize(rxBytes) +
-                            ", Uploaded: " + formatDataSize(txBytes);
-                    usageList.add(usageData);
-                    Log.d(TAG, "App: " + appName + ", RxBytes: " + rxBytes + ", TxBytes: " + txBytes);
+                    if (appUsageMap.containsKey(uid)) {
+                        AppUsage usage = appUsageMap.get(uid);
+                        usage.rxBytes += rxBytes;
+                        usage.txBytes += txBytes;
+                    } else {
+                        appUsageMap.put(uid, new AppUsage(rxBytes, txBytes));
+                    }
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching app network usage: " + e.getMessage());
+            Log.e(TAG, "Error fetching app data usage: " + e.getMessage());
         }
+        return appUsageMap;
     }
 
-    private String getAppNameForUid(int uid) {
-        PackageManager packageManager = requireContext().getPackageManager();
+    // Ändern der Methode getAppNameForUid, damit sie den Context akzeptiert
+    public String getAppNameForUid(int uid, Context context) {
+        PackageManager packageManager = context.getPackageManager();
         try {
-            String[] packageNames = packageManager.getPackagesForUid(uid);
-            if (packageNames != null && packageNames.length > 0) {
-                String packageName = packageNames[0];
-                return packageManager.getApplicationLabel(
-                        packageManager.getApplicationInfo(packageName, 0)).toString();
+            String packageName = packageManager.getNameForUid(uid);
+            if (packageName != null) {
+                PackageInfo pInfo = packageManager.getPackageInfo(packageName, 0);
+                return packageManager.getApplicationLabel(pInfo.applicationInfo).toString();
             }
         } catch (PackageManager.NameNotFoundException e) {
             Log.w(TAG, "Package name not found for UID: " + uid, e);
         } catch (Exception e) {
             Log.e(TAG, "Error resolving app name for UID: " + uid, e);
         }
-
-        return getFallbackAppName(uid);
-    }
-
-    private String getFallbackAppName(int uid) {
-        if (uid == android.os.Process.SYSTEM_UID) {
-            return "Android System";
-        } else if (uid == android.os.Process.PHONE_UID) {
-            return "Phone Service";
-        } else if (uid >= 1000 && uid < 2000) {
-            return "Core Android Service (UID " + uid + ")";
-        } else if (uid >= 2000 && uid < 3000) {
-            return "System App (UID " + uid + ")";
-        } else {
-            return "Unknown App (UID " + uid + ")";
-        }
+        return "Unknown App (UID " + uid + ")";
     }
 
     private String formatDataSize(long bytes) {
@@ -160,6 +165,16 @@ public class NetworkMonitorFragment extends Fragment {
             return String.format("%.2f KB", bytes / 1024.0);
         } else {
             return bytes + " Bytes";
+        }
+    }
+
+    static class AppUsage {
+        long txBytes;
+        long rxBytes;
+
+        AppUsage(long rxBytes, long txBytes) {
+            this.rxBytes = rxBytes;
+            this.txBytes = txBytes;
         }
     }
 }
