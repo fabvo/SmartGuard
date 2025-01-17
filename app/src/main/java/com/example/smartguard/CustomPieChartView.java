@@ -37,16 +37,18 @@ public class CustomPieChartView extends View {
 
     public void setData(Map<String, Float> data) {
         this.data = data;
-        invalidate(); // Neuzeichnen auslösen
+        invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         if (data == null || data.isEmpty()) {
             return;
         }
 
+        rectF.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
         float total = 0;
         for (float value : data.values()) {
             total += value;
@@ -54,10 +56,6 @@ public class CustomPieChartView extends View {
 
         float startAngle = 0;
         int colorIndex = 0;
-        int radius = Math.min(getWidth(), getHeight()) / 2;
-        rectF.set(getWidth() / 2f - radius, getHeight() / 2f - radius,
-                getWidth() / 2f + radius, getHeight() / 2f + radius);
-
         for (Map.Entry<String, Float> entry : data.entrySet()) {
             float sweepAngle = (entry.getValue() / total) * 360;
             paint.setColor(colors[colorIndex % colors.length]);

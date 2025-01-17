@@ -3,7 +3,15 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Titel -->
+    <TextView
+        android:id="@+id/totalDataUsage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Gesamtnutzung"
+        android:textSize="18sp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+
     <TextView
         android:id="@+id/activeAppsTitle"
         android:layout_width="wrap_content"
@@ -11,18 +19,26 @@
         android:text="Aktive Apps"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:layout_alignParentTop="true"
+        android:layout_below="@id/totalDataUsage"
+        android:layout_marginTop="8dp"
         android:layout_centerHorizontal="true" />
 
-    <!-- Liste der aktiven Apps -->
+    <TextView
+        android:id="@+id/activeAppsCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Aktive Apps: 0"
+        android:textSize="16sp"
+        android:layout_below="@id/activeAppsTitle"
+        android:layout_centerHorizontal="true" />
+
     <ListView
         android:id="@+id/appListView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/activeAppsTitle"
+        android:layout_below="@id/activeAppsCount"
         android:layout_marginTop="8dp" />
 
-    <!-- PieChart für Datennutzung -->
     <com.example.smartguard.CustomPieChartView
         android:id="@+id/dataUsageChartView"
         android:layout_width="match_parent"

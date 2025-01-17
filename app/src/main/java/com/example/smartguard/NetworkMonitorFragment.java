@@ -72,11 +72,11 @@ public class NetworkMonitorFragment extends Fragment {
                     long startTime = calculateStartTime(selectedFilter, currentTime);
 
                     usageList.clear();
-                    // Hier holen wir uns alle Apps mit deren Netzwerkdaten
+                    // Holen der Apps mit deren Netzwerkdaten
                     Map<Integer, AppUsage> appUsageMap = findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
                     appUsageMap.putAll(findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime));
 
-                    // Anzeige aller Apps inklusive ihrer UIDs und Netzwerkdaten
+                    // Anzeige der Apps und ihrer Netzwerkdaten
                     for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
                         String appName = getAppNameForUid(entry.getKey(), requireContext());
                         AppUsage usage = entry.getValue();
@@ -139,7 +139,7 @@ public class NetworkMonitorFragment extends Fragment {
         return appUsageMap;
     }
 
-    // Ändern der Methode getAppNameForUid, damit sie den Context akzeptiert
+    // Methode um den App-Namen basierend auf der UID zu bekommen
     public String getAppNameForUid(int uid, Context context) {
         PackageManager packageManager = context.getPackageManager();
         try {
