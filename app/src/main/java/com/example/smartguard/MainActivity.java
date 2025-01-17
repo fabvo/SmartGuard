@@ -11,6 +11,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
@@ -31,6 +32,10 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
         getSupportFragmentManager().beginTransaction().replace(R.id.container, homeFragment).commit();
+
+        BadgeDrawable badgeDrawable = bottomNavigationView.getOrCreateBadge(R.id.home);
+        badgeDrawable.setVisible(true);
+        badgeDrawable.setNumber(2);
 
         bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
             @Override
