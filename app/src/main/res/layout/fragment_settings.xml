@@ -8,6 +8,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Einstellungen Titel -->
         <TextView
             android:id="@+id/settingsTitle"
             android:layout_width="wrap_content"
@@ -51,7 +52,7 @@
             android:padding="8dp"
             android:text="Aktiviere Warnung bei hoher Datennutzung" />
 
-        <!-- Warnschwelle für Datennutzung -->
+        <!-- Warnschwelle -->
         <TextView
             android:id="@+id/thresholdLabel"
             android:layout_width="wrap_content"
@@ -88,5 +89,47 @@
                 android:clickable="true"
                 android:focusable="true" />
         </LinearLayout>
+
+        <!-- Berechtigungen verwalten -->
+        <TextView
+            android:id="@+id/managePermissions"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:minHeight="48dp"
+            android:padding="8dp"
+            android:text="Berechtigungen verwalten"
+            android:textSize="16sp"
+            android:textColor="@android:color/holo_blue_dark"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="16dp" />
+
+        <!-- Spezialzugriff verwalten -->
+        <TextView
+            android:id="@+id/specialAppAccess"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:minHeight="48dp"
+            android:padding="8dp"
+            android:text="Spezialzugriff verwalten"
+            android:textSize="16sp"
+            android:textColor="@android:color/holo_blue_dark"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="16dp" />
+
+        <!-- Nutzungszugriff verwalten -->
+        <TextView
+            android:id="@+id/usageAccessPermission"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:minHeight="48dp"
+            android:padding="8dp"
+            android:text="Nutzungszugriffsberechtigung verwalten"
+            android:textSize="16sp"
+            android:textColor="@android:color/holo_blue_dark"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="16dp" />
     </LinearLayout>
 </ScrollView>

@@ -1,23 +1,22 @@
 package com.example.smartguard;
 
-import static com.example.smartguard.R.*;
-
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.MenuItem;
-import android.widget.Button;
-import android.widget.SeekBar;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
 public class MainActivity extends AppCompatActivity {
 
-    BottomNavigationView bottomNavigationView;
+    private static final String PREFS_NAME = "AppSettings";
+    private static final String KEY_FIRST_RUN = "first_run";
 
     HomeFragment homeFragment = new HomeFragment();
     NetworkMonitorFragment networkMonitorFragment = new NetworkMonitorFragment();
@@ -29,18 +28,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        bottomNavigationView = findViewById(R.id.bottom_navigation);
-
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
         getSupportFragmentManager().beginTransaction().replace(R.id.container, homeFragment).commit();
-
-        BadgeDrawable badgeDrawable = bottomNavigationView.getOrCreateBadge(R.id.home);
-        badgeDrawable.setVisible(true);
-        badgeDrawable.setNumber(2);
 
         bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
             @Override
-            public boolean onNavigationItemSelected(MenuItem item) {
-                switch (item.getItemId()){
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                switch (item.getItemId()) {
                     case R.id.home:
                         getSupportFragmentManager().beginTransaction().replace(R.id.container, homeFragment).commit();
                         return true;
@@ -54,9 +48,29 @@ public class MainActivity extends AppCompatActivity {
                         getSupportFragmentManager().beginTransaction().replace(R.id.container, settingsFragment).commit();
                         return true;
                 }
-
                 return false;
             }
         });
+
+        // Überprüfen, ob die App zum ersten Mal geöffnet wird
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean firstRun = sharedPreferences.getBoolean(KEY_FIRST_RUN, true);
+
+        if (firstRun) {
+            showPermissionSetupDialog();
+            sharedPreferences.edit().putBoolean(KEY_FIRST_RUN, false).apply();
+        }
+    }
+
+    private void showPermissionSetupDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Berechtigungen erforderlich")
+                .setMessage("Um alle Funktionen der App nutzen zu können, müssen einige Berechtigungen erteilt werden. Möchten Sie diese jetzt einrichten?")
+                .setPositiveButton("Einrichten", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Später", null)
+                .show();
     }
 }
