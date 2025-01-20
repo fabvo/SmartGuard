@@ -6,4 +6,5 @@
         <item>Die letzte Woche</item>
         <item>Insgesamt</item>
     </string-array>
+    <string name="data_usage_format">%1$d Bytes Rx, %2$d Bytes Tx</string>
 </resources>

@@ -58,7 +58,6 @@ public class HomeFragment extends Fragment {
         appListView.setAdapter(appListAdapter);
 
         loadRunningApps();
-        updateDataUsageChart();
     }
 
     private void loadRunningApps() {
@@ -83,35 +82,6 @@ public class HomeFragment extends Fragment {
 
         activeAppsTextView.setText("Aktive Apps: " + appList.size());
         appListAdapter.notifyDataSetChanged();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private void updateDataUsageChart() {
-        long currentTime = System.currentTimeMillis();
-        long startTime = currentTime - (60 * 60 * 1000); // Letzte Stunde
-
-        Map<String, Float> dataUsage = new HashMap<>();
-        float totalUsage = 0;
-
-        NetworkStatsManager networkStatsManager = (NetworkStatsManager) requireContext().getSystemService(Context.NETWORK_STATS_SERVICE);
-        NetworkMonitorFragment networkMonitorFragment = new NetworkMonitorFragment();
-
-        Map<Integer, NetworkMonitorFragment.AppUsage> usageMap =
-                networkMonitorFragment.findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
-
-        for (Map.Entry<Integer, NetworkMonitorFragment.AppUsage> entry : usageMap.entrySet()) {
-            String appName = networkMonitorFragment.getAppNameForUid(entry.getKey(), requireContext());
-            float totalUsageInMB = (entry.getValue().rxBytes + entry.getValue().txBytes) / 1_048_576f; // MB
-            dataUsage.put(appName, totalUsageInMB);
-            totalUsage += totalUsageInMB;
-        }
-
-        totalDataUsageTextView.setText(String.format("Gesamtnutzung: %.2f MB", totalUsage));
-        if (totalUsage > 500) {
-            totalDataUsageTextView.setTextColor(Color.RED);
-        }
-
-        dataUsageChartView.setData(dataUsage);
     }
 
     public static class AppInfo {

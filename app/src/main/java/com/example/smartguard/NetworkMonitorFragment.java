@@ -3,8 +3,9 @@ package com.example.smartguard;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.content.Context;
-import android.content.pm.PackageInfo;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -21,8 +22,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,8 +36,8 @@ public class NetworkMonitorFragment extends Fragment {
 
     private static final String TAG = "NetworkMonitor";
     private ListView listView;
-    private List<String> usageList;
-    private ArrayAdapter<String> adapter;
+    private List<AppUsage> appUsageList;
+    private AppUsageAdapter adapter;
 
     @Nullable
     @Override
@@ -48,8 +51,8 @@ public class NetworkMonitorFragment extends Fragment {
 
         listView = view.findViewById(R.id.networkUsageListView);
         Spinner timeFilterSpinner = view.findViewById(R.id.timeFilterSpinner);
-        usageList = new ArrayList<>();
-        adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, usageList);
+        appUsageList = new ArrayList<>();
+        adapter = new AppUsageAdapter(requireContext(), appUsageList);
         listView.setAdapter(adapter);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -71,27 +74,22 @@ public class NetworkMonitorFragment extends Fragment {
                     long currentTime = System.currentTimeMillis();
                     long startTime = calculateStartTime(selectedFilter, currentTime);
 
-                    usageList.clear();
-                    // Holen der Apps mit deren Netzwerkdaten
+                    appUsageList.clear();
                     Map<Integer, AppUsage> appUsageMap = findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
                     appUsageMap.putAll(findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime));
 
-                    // Anzeige der Apps und ihrer Netzwerkdaten
                     for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
                         String appName = getAppNameForUid(entry.getKey(), requireContext());
+                        Drawable appIcon = getAppIconForUid(entry.getKey(), requireContext());
                         AppUsage usage = entry.getValue();
-                        String usageData = appName + " - Downloaded: " + formatDataSize(usage.rxBytes) +
-                                ", Uploaded: " + formatDataSize(usage.txBytes);
-                        usageList.add(usageData);
-                        Log.d(TAG, "UID: " + entry.getKey() + ", App: " + appName + ", RxBytes: " + usage.rxBytes + ", TxBytes: " + usage.txBytes);
+                        appUsageList.add(new AppUsage(appName, appIcon, usage.getRxBytes(), usage.getTxBytes()));
                     }
 
                     adapter.notifyDataSetChanged();
                 }
 
                 @Override
-                public void onNothingSelected(AdapterView<?> parent) {
-                }
+                public void onNothingSelected(AdapterView<?> parent) {}
             });
         }
     }
@@ -99,14 +97,14 @@ public class NetworkMonitorFragment extends Fragment {
     private long calculateStartTime(String filter, long currentTime) {
         switch (filter) {
             case "Die letzte Stunde":
-                return currentTime - (60 * 60 * 1000); // 1 Stunde
+                return currentTime - (60 * 60 * 1000);
             case "Die letzten 24 Stunden":
-                return currentTime - (24 * 60 * 60 * 1000); // 24 Stunden
+                return currentTime - (24 * 60 * 60 * 1000);
             case "Die letzte Woche":
-                return currentTime - (7 * 24 * 60 * 60 * 1000); // 7 Tage
+                return currentTime - (7 * 24 * 60 * 60 * 1000);
             case "Insgesamt":
             default:
-                return 0; // Gesamtdaten
+                return 0;
         }
     }
 
@@ -126,10 +124,10 @@ public class NetworkMonitorFragment extends Fragment {
                 if (rxBytes > 0 || txBytes > 0) {
                     if (appUsageMap.containsKey(uid)) {
                         AppUsage usage = appUsageMap.get(uid);
-                        usage.rxBytes += rxBytes;
-                        usage.txBytes += txBytes;
+                        usage = new AppUsage(usage.getName(), usage.getIcon(), usage.getRxBytes() + rxBytes, usage.getTxBytes() + txBytes);
+                        appUsageMap.put(uid, usage);
                     } else {
-                        appUsageMap.put(uid, new AppUsage(rxBytes, txBytes));
+                        appUsageMap.put(uid, new AppUsage("", null, rxBytes, txBytes));
                     }
                 }
             }
@@ -139,42 +137,57 @@ public class NetworkMonitorFragment extends Fragment {
         return appUsageMap;
     }
 
-    // Methode um den App-Namen basierend auf der UID zu bekommen
     public String getAppNameForUid(int uid, Context context) {
         PackageManager packageManager = context.getPackageManager();
         try {
             String packageName = packageManager.getNameForUid(uid);
             if (packageName != null) {
-                PackageInfo pInfo = packageManager.getPackageInfo(packageName, 0);
-                return packageManager.getApplicationLabel(pInfo.applicationInfo).toString();
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                return packageManager.getApplicationLabel(appInfo).toString();
             }
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.w(TAG, "Package name not found for UID: " + uid, e);
         } catch (Exception e) {
             Log.e(TAG, "Error resolving app name for UID: " + uid, e);
         }
         return "Unknown App (UID " + uid + ")";
     }
 
-    private String formatDataSize(long bytes) {
-        if (bytes >= 1_073_741_824) { // 1 GB
-            return String.format("%.2f GB", bytes / 1_073_741_824.0);
-        } else if (bytes >= 1_048_576) { // 1 MB
-            return String.format("%.2f MB", bytes / 1_048_576.0);
-        } else if (bytes >= 1024) { // 1 KB
-            return String.format("%.2f KB", bytes / 1024.0);
-        } else {
-            return bytes + " Bytes";
+    public Drawable getAppIconForUid(int uid, Context context) {
+        PackageManager packageManager = context.getPackageManager();
+        try {
+            String packageName = packageManager.getNameForUid(uid);
+            if (packageName != null) {
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                return packageManager.getApplicationIcon(appInfo);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error resolving app icon for UID: " + uid, e);
         }
+        return context.getDrawable(android.R.drawable.sym_def_app_icon);
     }
 
-    static class AppUsage {
-        long txBytes;
-        long rxBytes;
+    static class AppUsageAdapter extends ArrayAdapter<AppUsage> {
 
-        AppUsage(long rxBytes, long txBytes) {
-            this.rxBytes = rxBytes;
-            this.txBytes = txBytes;
+        public AppUsageAdapter(@NonNull Context context, List<AppUsage> appUsageList) {
+            super(context, 0, appUsageList);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @NonNull View convertView, @NonNull ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.network_usage_item, parent, false);
+            }
+
+            AppUsage appUsage = getItem(position);
+            TextView appNameTextView = convertView.findViewById(R.id.appNameTextView);
+            ImageView appIconImageView = convertView.findViewById(R.id.appIconImageView);
+            TextView dataUsageTextView = convertView.findViewById(R.id.dataUsageTextView);
+
+            appNameTextView.setText(appUsage.getName());
+            appIconImageView.setImageDrawable(appUsage.getIcon());
+            dataUsageTextView.setText(appUsage.getFormattedDataUsage());
+
+            return convertView;
         }
     }
 }

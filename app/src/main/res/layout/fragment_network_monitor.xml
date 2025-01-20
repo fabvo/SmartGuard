@@ -17,6 +17,6 @@
         android:layout_height="match_parent"
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp"
-        android:padding="8dp" />
-
+        android:padding="8dp"
+        android:layout_marginTop="16dp" />
 </LinearLayout>
