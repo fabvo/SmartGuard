@@ -80,7 +80,7 @@ public class NetworkMonitorFragment extends Fragment {
                     for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
                         String appName = getAppNameForUid(entry.getKey(), requireContext());
                         AppUsage usage = entry.getValue();
-                        String usageData = "UID: " + entry.getKey() + " - App: " + appName + " - Downloaded: " + formatDataSize(usage.rxBytes) +
+                        String usageData = appName + " - Downloaded: " + formatDataSize(usage.rxBytes) +
                                 ", Uploaded: " + formatDataSize(usage.txBytes);
                         usageList.add(usageData);
                         Log.d(TAG, "UID: " + entry.getKey() + ", App: " + appName + ", RxBytes: " + usage.rxBytes + ", TxBytes: " + usage.txBytes);
