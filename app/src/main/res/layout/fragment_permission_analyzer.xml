@@ -1,19 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".PermissionAnalyzerFragment">
+    android:padding="8dp">
 
     <TextView
         android:id="@+id/permissionsTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Permission Analyzer"
-        android:textSize="25sp"
+        android:textSize="24sp"
+        android:textStyle="bold"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:layout_alignParentTop="true"/>
+        android:layout_marginBottom="16dp" />
 
     <ListView
         android:id="@+id/permissionsListView"
@@ -21,7 +19,5 @@
         android:layout_height="match_parent"
         android:layout_below="@id/permissionsTitle"
         android:divider="@android:color/darker_gray"
-        android:dividerHeight="0.5dp"
-        android:padding="8dp" />
-
+        android:dividerHeight="1dp" />
 </RelativeLayout>

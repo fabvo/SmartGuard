@@ -1,15 +1,17 @@
 package com.example.smartguard;
 
+import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
-import android.widget.ArrayAdapter;
-import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import java.util.ArrayList;
@@ -20,47 +22,44 @@ public class PermissionAnalyzerFragment extends Fragment {
     private ListView permissionsListView;
     private PackageManager packageManager;
 
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        View rootView = inflater.inflate(R.layout.fragment_permission_analyzer, container, false);
-
-        // Initialize the PackageManager
-        packageManager = getActivity().getPackageManager();
-
-        // Initialize the ListView
-        permissionsListView = rootView.findViewById(R.id.permissionsListView);
-
-        // Get the list of installed apps and their permissions
-        List<String> appPermissions = getAppPermissions();
-
-        // Set up an adapter to display the permissions
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(getActivity(),
-                android.R.layout.simple_list_item_1, appPermissions);
-        permissionsListView.setAdapter(adapter);
-
-        return rootView;
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_permission_analyzer, container, false);
     }
 
-    // Get list of apps and their permissions
-    private List<String> getAppPermissions() {
-        List<String> appPermissions = new ArrayList<>();
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        // Get the list of installed apps
+        permissionsListView = view.findViewById(R.id.permissionsListView);
+        packageManager = requireContext().getPackageManager();
+
+        List<AppPermissionInfo> appPermissionList = getAppPermissions(requireContext());
+        PermissionListAdapter adapter = new PermissionListAdapter(requireContext(), appPermissionList);
+        permissionsListView.setAdapter(adapter);
+    }
+
+    private List<AppPermissionInfo> getAppPermissions(Context context) {
+        List<AppPermissionInfo> appPermissionList = new ArrayList<>();
         List<PackageInfo> packages = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS);
 
-        // Loop through each app and get its permissions
         for (PackageInfo packageInfo : packages) {
+            Drawable appIcon = packageManager.getApplicationIcon(packageInfo.applicationInfo);
+            String appName = packageManager.getApplicationLabel(packageInfo.applicationInfo).toString();
+            StringBuilder permissions = new StringBuilder();
+
             if (packageInfo.requestedPermissions != null) {
-                StringBuilder appInfo = new StringBuilder(packageInfo.packageName + ":\n");
                 for (String permission : packageInfo.requestedPermissions) {
-                    appInfo.append(permission).append("\n");
+                    permissions.append(permission).append("\n");
                 }
-                appPermissions.add(appInfo.toString());
+            } else {
+                permissions.append("Keine Berechtigungen");
             }
+
+            appPermissionList.add(new AppPermissionInfo(appName, appIcon, permissions.toString()));
         }
 
-        return appPermissions;
+        return appPermissionList;
     }
 }
