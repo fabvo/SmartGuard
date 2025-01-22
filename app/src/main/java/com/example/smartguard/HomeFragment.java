@@ -1,41 +1,38 @@
 package com.example.smartguard;
 
-import android.app.usage.NetworkStatsManager;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.fragment.app.Fragment;
+
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
     private ListView appListView;
-    private CustomPieChartView dataUsageChartView;
     private TextView totalDataUsageTextView;
     private TextView activeAppsTextView;
     private List<AppInfo> appList;
     private AppListAdapter appListAdapter;
+
+    private ActivityManager activityManager;
 
     @Nullable
     @Override
@@ -49,7 +46,6 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         appListView = view.findViewById(R.id.appListView);
-        dataUsageChartView = view.findViewById(R.id.dataUsageChartView);
         totalDataUsageTextView = view.findViewById(R.id.totalDataUsage);
         activeAppsTextView = view.findViewById(R.id.activeAppsCount);
 
@@ -57,33 +53,61 @@ public class HomeFragment extends Fragment {
         appListAdapter = new AppListAdapter(requireContext(), appList);
         appListView.setAdapter(appListAdapter);
 
-        loadRunningApps();
+        activityManager = (ActivityManager) requireContext().getSystemService(Context.ACTIVITY_SERVICE);
+
+        loadActiveApps();
     }
 
-    private void loadRunningApps() {
+    private void loadActiveApps() {
         PackageManager packageManager = requireContext().getPackageManager();
 
-        try {
-            List<ApplicationInfo> installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
+        // Erhalte alle installierten Apps
+        List<ApplicationInfo> installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
+        int activeAppsCount = 0;
 
+        try {
+            // Hole die Liste der aktuell laufenden Tasks
+            List<ActivityManager.RunningAppProcessInfo> runningProcesses = activityManager.getRunningAppProcesses();
+
+            // Check, ob die App in der RunningAppProcess-Liste enthalten ist
             for (ApplicationInfo appInfo : installedApps) {
                 if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
                     // Nur benutzerinstallierte Apps
-                    String appName = packageManager.getApplicationLabel(appInfo).toString();
-                    Drawable appIcon = packageManager.getApplicationIcon(appInfo);
 
-                    appList.add(new AppInfo(appName, appIcon));
-                    Log.d(TAG, "App found: " + appName);
+                    boolean isAppRunning = false;
+
+                    // Überprüfe, ob die App im Hintergrund läuft
+                    for (ActivityManager.RunningAppProcessInfo processInfo : runningProcesses) {
+                        if (processInfo.processName.equals(appInfo.packageName)) {
+                            isAppRunning = true;
+                            break;
+                        }
+                    }
+
+                    if (isAppRunning) {
+                        String appName = packageManager.getApplicationLabel(appInfo).toString();
+                        Drawable appIcon = packageManager.getApplicationIcon(appInfo);
+
+                        appList.add(new AppInfo(appName, appIcon));
+                        activeAppsCount++;
+                    }
+
+                    Log.d(TAG, "App found: " + appInfo.packageName + " - Active: " + isAppRunning);
                 }
             }
+
         } catch (Exception e) {
-            Log.e(TAG, "Error loading running apps: " + e.getMessage());
+            Log.e(TAG, "Error loading active apps: " + e.getMessage());
         }
 
-        activeAppsTextView.setText("Aktive Apps: " + appList.size());
+        int totalAppsCount = installedApps.size();
+
+        // Setze die Textansicht, um aktive und gesamte Apps anzuzeigen
+        activeAppsTextView.setText("Aktive Apps: " + activeAppsCount + "/" + totalAppsCount);
         appListAdapter.notifyDataSetChanged();
     }
 
+    // AppInfo-Klasse
     public static class AppInfo {
         String name;
         Drawable icon;
@@ -92,5 +116,13 @@ public class HomeFragment extends Fragment {
             this.name = name;
             this.icon = icon;
         }
+    }
+
+    // Methoden zur Berechtigungsprüfung für PACKAGE_USAGE_STATS
+    public static boolean isUsageStatsPermissionGranted(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).contains("PACKAGE_USAGE_STATS");
+        }
+        return false;
     }
 }
