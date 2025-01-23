@@ -1,16 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <item android:id="@+id/home"
+    <item
+        android:id="@+id/home"
         android:title="Home"
-        android:icon="@drawable/baseline_home_24"/>
-    <item android:id="@+id/network_monitor"
-        android:title="Network monitor"
-        android:icon="@drawable/baseline_network_check_24"/>
-    <item android:id="@+id/permission_analyzer"
-        android:title="Permission Analyzer"
-        android:icon="@drawable/baseline_beenhere_24"/>
-    <item android:id="@+id/settings"
+        android:icon="@drawable/baseline_home_24" />
+
+    <item
+        android:id="@+id/network_monitor"
+        android:title="Network"
+        android:icon="@drawable/baseline_network_check_24" />
+
+    <item
+        android:id="@+id/placeholder"
+        android:title=""
+        android:enabled="false" />
+
+    <item
+        android:id="@+id/permission_analyzer"
+        android:title="Permissions"
+        android:icon="@drawable/baseline_beenhere_24" />
+
+    <item
+        android:id="@+id/settings"
         android:title="Settings"
-        android:icon="@drawable/baseline_app_settings_alt_24"/>
+        android:icon="@drawable/baseline_app_settings_alt_24" />
 </menu>
