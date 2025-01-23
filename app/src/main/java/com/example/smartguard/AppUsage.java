@@ -7,12 +7,30 @@ public class AppUsage {
     private Drawable icon;
     private long rxBytes;
     private long txBytes;
+    private long foregroundBytes;
+    private long backgroundBytes;
 
-    public AppUsage(String name, Drawable icon, long rxBytes, long txBytes) {
+    public AppUsage(String name, Drawable icon, long rxBytes, long txBytes, long foregroundBytes, long backgroundBytes) {
         this.name = name;
         this.icon = icon;
         this.rxBytes = rxBytes;
         this.txBytes = txBytes;
+        this.foregroundBytes = foregroundBytes;
+        this.backgroundBytes = backgroundBytes;
+    }
+
+    public void addUsage(long rxBytes, long txBytes, long foregroundBytes, long backgroundBytes) {
+        this.rxBytes += rxBytes;
+        this.txBytes += txBytes;
+        this.foregroundBytes += foregroundBytes;
+        this.backgroundBytes += backgroundBytes;
+    }
+
+    public String getDetailedUsage() {
+        return "Foreground: " + (foregroundBytes / (1024 * 1024)) + " MB\n"
+                + "Background: " + (backgroundBytes / (1024 * 1024)) + " MB\n"
+                + "Download: " + (rxBytes / (1024 * 1024)) + " MB\n"
+                + "Upload: " + (txBytes / (1024 * 1024)) + " MB";
     }
 
     public String getName() {
@@ -31,23 +49,15 @@ public class AppUsage {
         return txBytes;
     }
 
-    public long getTotalBytes() {
-        return rxBytes + txBytes;
+    public long getForegroundBytes() {
+        return foregroundBytes;
+    }
+
+    public long getBackgroundBytes() {
+        return backgroundBytes;
     }
 
     public String getFormattedDataUsage() {
-        return formatDataSize(getTotalBytes());
-    }
-
-    private String formatDataSize(long bytes) {
-        if (bytes >= 1_073_741_824) {
-            return String.format("%.2f GB", bytes / 1_073_741_824.0);
-        } else if (bytes >= 1_048_576) {
-            return String.format("%.2f MB", bytes / 1_048_576.0);
-        } else if (bytes >= 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
-        } else {
-            return bytes + " Bytes";
-        }
+        return (rxBytes + txBytes) / (1024 * 1024) + " MB";
     }
 }

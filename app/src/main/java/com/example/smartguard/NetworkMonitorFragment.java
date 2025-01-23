@@ -9,7 +9,6 @@ import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -70,22 +69,10 @@ public class NetworkMonitorFragment extends Fragment {
             timeFilterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    String selectedFilter = (String) parent.getItemAtPosition(position);
-                    long currentTime = System.currentTimeMillis();
-                    long startTime = calculateStartTime(selectedFilter, currentTime);
-
-                    appUsageList.clear();
-                    Map<Integer, AppUsage> appUsageMap = findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
-                    appUsageMap.putAll(findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime));
-
-                    for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
-                        String appName = getAppNameForUid(entry.getKey(), requireContext());
-                        Drawable appIcon = getAppIconForUid(entry.getKey(), requireContext());
-                        AppUsage usage = entry.getValue();
-                        appUsageList.add(new AppUsage(appName, appIcon, usage.getRxBytes(), usage.getTxBytes()));
-                    }
-
-                    adapter.notifyDataSetChanged();
+                    final String selectedFilter = (String) parent.getItemAtPosition(position);
+                    final long currentTime = System.currentTimeMillis();
+                    final long startTime = calculateStartTime(selectedFilter, currentTime);
+                    updateAppUsageList(networkStatsManager, startTime, currentTime);
                 }
 
                 @Override
@@ -109,6 +96,24 @@ public class NetworkMonitorFragment extends Fragment {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
+    private void updateAppUsageList(NetworkStatsManager networkStatsManager, long startTime, long currentTime) {
+        List<AppUsage> newAppUsageList = new ArrayList<>();
+        Map<Integer, AppUsage> appUsageMap = findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_WIFI, startTime, currentTime);
+        appUsageMap.putAll(findAppDataUsage(networkStatsManager, ConnectivityManager.TYPE_MOBILE, startTime, currentTime));
+
+        for (Map.Entry<Integer, AppUsage> entry : appUsageMap.entrySet()) {
+            String appName = getAppNameForUid(entry.getKey(), requireContext());
+            Drawable appIcon = getAppIconForUid(entry.getKey(), requireContext());
+            AppUsage usage = entry.getValue();
+            newAppUsageList.add(new AppUsage(appName, appIcon, usage.getRxBytes(), usage.getTxBytes(), usage.getForegroundBytes(), usage.getBackgroundBytes()));
+        }
+
+        appUsageList.clear();
+        appUsageList.addAll(newAppUsageList);
+        adapter.notifyDataSetChanged();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
     public Map<Integer, AppUsage> findAppDataUsage(NetworkStatsManager networkStatsManager, int networkType, long startTime, long endTime) {
         Map<Integer, AppUsage> appUsageMap = new HashMap<>();
         try {
@@ -120,14 +125,15 @@ public class NetworkMonitorFragment extends Fragment {
                 int uid = bucket.getUid();
                 long rxBytes = bucket.getRxBytes();
                 long txBytes = bucket.getTxBytes();
+                long foregroundBytes = 0; // Placeholder: Not directly available in some SDKs
+                long backgroundBytes = (rxBytes + txBytes) - foregroundBytes;
 
                 if (rxBytes > 0 || txBytes > 0) {
                     if (appUsageMap.containsKey(uid)) {
                         AppUsage usage = appUsageMap.get(uid);
-                        usage = new AppUsage(usage.getName(), usage.getIcon(), usage.getRxBytes() + rxBytes, usage.getTxBytes() + txBytes);
-                        appUsageMap.put(uid, usage);
+                        usage.addUsage(rxBytes, txBytes, foregroundBytes, backgroundBytes);
                     } else {
-                        appUsageMap.put(uid, new AppUsage("", null, rxBytes, txBytes));
+                        appUsageMap.put(uid, new AppUsage("", null, rxBytes, txBytes, foregroundBytes, backgroundBytes));
                     }
                 }
             }
@@ -186,6 +192,17 @@ public class NetworkMonitorFragment extends Fragment {
             appNameTextView.setText(appUsage.getName());
             appIconImageView.setImageDrawable(appUsage.getIcon());
             dataUsageTextView.setText(appUsage.getFormattedDataUsage());
+
+            View finalConvertView = convertView;
+            convertView.setOnClickListener(v -> {
+                TextView expandedDetails = finalConvertView.findViewById(R.id.expandedDetailsTextView);
+                if (expandedDetails.getVisibility() == View.GONE) {
+                    expandedDetails.setVisibility(View.VISIBLE);
+                    expandedDetails.setText(appUsage.getDetailedUsage());
+                } else {
+                    expandedDetails.setVisibility(View.GONE);
+                }
+            });
 
             return convertView;
         }
