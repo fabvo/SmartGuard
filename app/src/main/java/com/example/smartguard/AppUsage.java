@@ -3,34 +3,45 @@ package com.example.smartguard;
 import android.graphics.drawable.Drawable;
 
 public class AppUsage {
-    private String name;
-    private Drawable icon;
+    private final String name;
+    private final Drawable icon;
     private long rxBytes;
     private long txBytes;
-    private long foregroundBytes;
-    private long backgroundBytes;
+    private long foregroundRxBytes;
+    private long foregroundTxBytes;
+    private long backgroundRxBytes;
+    private long backgroundTxBytes;
 
-    public AppUsage(String name, Drawable icon, long rxBytes, long txBytes, long foregroundBytes, long backgroundBytes) {
+    public AppUsage(String name, Drawable icon, long rxBytes, long txBytes,
+                    long foregroundRxBytes, long foregroundTxBytes,
+                    long backgroundRxBytes, long backgroundTxBytes) {
         this.name = name;
         this.icon = icon;
         this.rxBytes = rxBytes;
         this.txBytes = txBytes;
-        this.foregroundBytes = foregroundBytes;
-        this.backgroundBytes = backgroundBytes;
+        this.foregroundRxBytes = foregroundRxBytes;
+        this.foregroundTxBytes = foregroundTxBytes;
+        this.backgroundRxBytes = backgroundRxBytes;
+        this.backgroundTxBytes = backgroundTxBytes;
     }
 
-    public void addUsage(long rxBytes, long txBytes, long foregroundBytes, long backgroundBytes) {
+    public void addUsage(long rxBytes, long txBytes, long foregroundRxBytes, long foregroundTxBytes,
+                         long backgroundRxBytes, long backgroundTxBytes) {
         this.rxBytes += rxBytes;
         this.txBytes += txBytes;
-        this.foregroundBytes += foregroundBytes;
-        this.backgroundBytes += backgroundBytes;
+        this.foregroundRxBytes += foregroundRxBytes;
+        this.foregroundTxBytes += foregroundTxBytes;
+        this.backgroundRxBytes += backgroundRxBytes;
+        this.backgroundTxBytes += backgroundTxBytes;
     }
 
     public String getDetailedUsage() {
-        return "Foreground: " + (foregroundBytes / (1024 * 1024)) + " MB\n"
-                + "Background: " + (backgroundBytes / (1024 * 1024)) + " MB\n"
-                + "Download: " + (rxBytes / (1024 * 1024)) + " MB\n"
-                + "Upload: " + (txBytes / (1024 * 1024)) + " MB";
+        return "Foreground:\n"
+                + "  Download: " + formatDataSize(foregroundRxBytes) + "\n"
+                + "  Upload: " + formatDataSize(foregroundTxBytes) + "\n"
+                + "Background:\n"
+                + "  Download: " + formatDataSize(backgroundRxBytes) + "\n"
+                + "  Upload: " + formatDataSize(backgroundTxBytes) + "\n";
     }
 
     public String getName() {
@@ -41,6 +52,11 @@ public class AppUsage {
         return icon;
     }
 
+    public String getFormattedDataUsage() {
+        return "Total: " + formatDataSize(rxBytes + txBytes);
+    }
+
+    // Add getter methods for the missing fields
     public long getRxBytes() {
         return rxBytes;
     }
@@ -49,15 +65,31 @@ public class AppUsage {
         return txBytes;
     }
 
-    public long getForegroundBytes() {
-        return foregroundBytes;
+    public long getForegroundRxBytes() {
+        return foregroundRxBytes;
     }
 
-    public long getBackgroundBytes() {
-        return backgroundBytes;
+    public long getForegroundTxBytes() {
+        return foregroundTxBytes;
     }
 
-    public String getFormattedDataUsage() {
-        return (rxBytes + txBytes) / (1024 * 1024) + " MB";
+    public long getBackgroundRxBytes() {
+        return backgroundRxBytes;
+    }
+
+    public long getBackgroundTxBytes() {
+        return backgroundTxBytes;
+    }
+
+    private String formatDataSize(long bytes) {
+        if (bytes >= 1_073_741_824) {
+            return String.format("%.2f GB", bytes / 1_073_741_824.0);
+        } else if (bytes >= 1_048_576) {
+            return String.format("%.2f MB", bytes / 1_048_576.0);
+        } else if (bytes >= 1024) {
+            return String.format("%.2f KB", bytes / 1024.0);
+        } else {
+            return bytes + " Bytes";
+        }
     }
 }
