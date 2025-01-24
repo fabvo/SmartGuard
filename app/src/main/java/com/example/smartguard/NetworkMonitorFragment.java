@@ -39,6 +39,7 @@ public class NetworkMonitorFragment extends Fragment {
     private ListView listView;
     private List<AppUsage> appUsageList;
     private AppUsageAdapter adapter;
+    private Spinner timeFilterSpinner;
 
     @Nullable
     @Override
@@ -51,7 +52,7 @@ public class NetworkMonitorFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         listView = view.findViewById(R.id.networkUsageListView);
-        Spinner timeFilterSpinner = view.findViewById(R.id.timeFilterSpinner);
+        timeFilterSpinner = view.findViewById(R.id.timeFilterSpinner);
         appUsageList = new ArrayList<>();
         adapter = new AppUsageAdapter(requireContext(), appUsageList);
         listView.setAdapter(adapter);
@@ -60,10 +61,11 @@ public class NetworkMonitorFragment extends Fragment {
             NetworkStatsManager networkStatsManager =
                     (NetworkStatsManager) requireContext().getSystemService(Context.NETWORK_STATS_SERVICE);
 
-            ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
+            // Spinner anpassen mit neuem Adapter
+            ArrayAdapter<CharSequence> spinnerAdapter = new ArrayAdapter<>(
                     requireContext(),
-                    R.array.time_filter_options,
-                    android.R.layout.simple_spinner_item
+                    android.R.layout.simple_spinner_item,
+                    getResources().getStringArray(R.array.time_filter_options)
             );
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             timeFilterSpinner.setAdapter(spinnerAdapter);
@@ -90,12 +92,10 @@ public class NetworkMonitorFragment extends Fragment {
                     }
 
                     // Sortieren nach gesamtem Datenverbrauch
-                    Collections.sort(appUsageList, new Comparator<AppUsage>() {
-                        @Override
-                        public int compare(AppUsage o1, AppUsage o2) {
-                            return Long.compare(o2.getRxBytes() + o2.getTxBytes(), o1.getRxBytes() + o1.getTxBytes());
-                        }
-                    });
+                    Collections.sort(appUsageList, (o1, o2) -> Long.compare(
+                            o2.getRxBytes() + o2.getTxBytes(),
+                            o1.getRxBytes() + o1.getTxBytes()
+                    ));
 
                     adapter.notifyDataSetChanged();
                 }
@@ -108,13 +108,13 @@ public class NetworkMonitorFragment extends Fragment {
 
     private long calculateStartTime(String filter, long currentTime) {
         switch (filter) {
-            case "Die letzte Stunde":
+            case "Letzte Stunde":
                 return currentTime - (60 * 60 * 1000);
-            case "Die letzten 24 Stunden":
+            case "Letzte 24 Stunden":
                 return currentTime - (24 * 60 * 60 * 1000);
-            case "Die letzte Woche":
+            case "Letzte Woche":
                 return currentTime - (7 * 24 * 60 * 60 * 1000);
-            case "Insgesamt":
+            case "Gesamte Nutzung":
             default:
                 return 0;
         }

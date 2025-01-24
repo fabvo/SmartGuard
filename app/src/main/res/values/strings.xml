@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">SmartGuard</string>
     <string-array name="time_filter_options">
-        <item>Die letzte Stunde</item>
-        <item>Die letzten 24 Stunden</item>
-        <item>Die letzte Woche</item>
-        <item>Insgesamt</item>
+        <item>Letzte Stunde</item>
+        <item>Letzte 24 Stunden</item>
+        <item>Letzte Woche</item>
+        <item>Gesamte Nutzung</item>
     </string-array>
     <string name="data_usage_format">%1$d Bytes Rx, %2$d Bytes Tx</string>
     <string name="app_icon">App-Symbol</string>
