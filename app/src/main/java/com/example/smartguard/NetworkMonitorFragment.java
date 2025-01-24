@@ -27,6 +27,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +88,14 @@ public class NetworkMonitorFragment extends Fragment {
                                 usage.getForegroundRxBytes(), usage.getForegroundTxBytes(),
                                 usage.getBackgroundRxBytes(), usage.getBackgroundTxBytes()));
                     }
+
+                    // Sortieren nach gesamtem Datenverbrauch
+                    Collections.sort(appUsageList, new Comparator<AppUsage>() {
+                        @Override
+                        public int compare(AppUsage o1, AppUsage o2) {
+                            return Long.compare(o2.getRxBytes() + o2.getTxBytes(), o1.getRxBytes() + o1.getTxBytes());
+                        }
+                    });
 
                     adapter.notifyDataSetChanged();
                 }
