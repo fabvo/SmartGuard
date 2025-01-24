@@ -3,6 +3,7 @@ package com.example.smartguard;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -51,7 +52,8 @@ public class PermissionAnalyzerFragment extends Fragment {
 
             if (packageInfo.requestedPermissions != null) {
                 for (String permission : packageInfo.requestedPermissions) {
-                    permissions.append(permission).append("\n");
+                    String readablePermission = getReadablePermissionName(permission);
+                    permissions.append(readablePermission).append("\n");
                 }
             } else {
                 permissions.append("Keine Berechtigungen");
@@ -61,5 +63,23 @@ public class PermissionAnalyzerFragment extends Fragment {
         }
 
         return appPermissionList;
+    }
+
+    private String getReadablePermissionName(String permission) {
+        try {
+            PackageManager packageManager = requireContext().getPackageManager();
+            PermissionInfo permissionInfo = packageManager.getPermissionInfo(permission, PackageManager.GET_META_DATA);
+
+            // Lade das Label der Berechtigung
+            CharSequence label = permissionInfo.loadLabel(packageManager);
+            if (label != null) {
+                return label.toString();
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        // Wenn keine lesbare Beschreibung gefunden wurde, zeige die ursprüngliche Berechtigung
+        return permission;
     }
 }

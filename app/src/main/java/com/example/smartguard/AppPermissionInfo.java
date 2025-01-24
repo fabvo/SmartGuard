@@ -2,23 +2,25 @@ package com.example.smartguard;
 
 import android.graphics.drawable.Drawable;
 
+import android.content.pm.PermissionInfo;
+
 public class AppPermissionInfo {
-    private final String name;
-    private final Drawable icon;
+    private final String appName;
+    private final Drawable appIcon;
     private final String permissions;
 
-    public AppPermissionInfo(String name, Drawable icon, String permissions) {
-        this.name = name;
-        this.icon = icon;
+    public AppPermissionInfo(String appName, Drawable appIcon, String permissions) {
+        this.appName = appName;
+        this.appIcon = appIcon;
         this.permissions = permissions;
     }
 
-    public String getName() {
-        return name;
+    public String getAppName() {
+        return appName;
     }
 
-    public Drawable getIcon() {
-        return icon;
+    public Drawable getAppIcon() {
+        return appIcon;
     }
 
     public String getPermissions() {

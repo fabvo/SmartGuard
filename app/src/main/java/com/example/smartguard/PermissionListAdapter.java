@@ -33,8 +33,8 @@ public class PermissionListAdapter extends ArrayAdapter<AppPermissionInfo> {
         TextView appName = convertView.findViewById(R.id.appName);
         TextView appPermissions = convertView.findViewById(R.id.appPermissions);
 
-        appIcon.setImageDrawable(appPermissionInfo.getIcon());
-        appName.setText(appPermissionInfo.getName());
+        appIcon.setImageDrawable(appPermissionInfo.getAppIcon());
+        appName.setText(appPermissionInfo.getAppName());
         appPermissions.setText(appPermissionInfo.getPermissions());
 
         return convertView;
