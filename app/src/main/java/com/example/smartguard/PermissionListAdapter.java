@@ -22,20 +22,22 @@ public class PermissionListAdapter extends ArrayAdapter<AppPermissionInfo> {
 
     @NonNull
     @Override
-    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+    public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.permission_list_item, parent, false);
         }
 
         AppPermissionInfo appPermissionInfo = getItem(position);
 
-        ImageView appIcon = convertView.findViewById(R.id.appIcon);
-        TextView appName = convertView.findViewById(R.id.appName);
-        TextView appPermissions = convertView.findViewById(R.id.appPermissions);
+        TextView appNameTextView = convertView.findViewById(R.id.appNameTextView);
+        ImageView appIconImageView = convertView.findViewById(R.id.appIconImageView);
+        TextView permissionsTextView = convertView.findViewById(R.id.permissionsTextView);
 
-        appIcon.setImageDrawable(appPermissionInfo.getAppIcon());
-        appName.setText(appPermissionInfo.getAppName());
-        appPermissions.setText(appPermissionInfo.getPermissions());
+        appNameTextView.setText(appPermissionInfo.getAppName());
+        appIconImageView.setImageDrawable(appPermissionInfo.getAppIcon());
+
+        // Setze Berechtigungen mit HTML-Formatierung
+        permissionsTextView.setText(android.text.Html.fromHtml(appPermissionInfo.getPermissions()));
 
         return convertView;
     }
