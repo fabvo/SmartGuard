@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -18,34 +19,40 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "AppSettings";
     private static final String KEY_FIRST_RUN = "first_run";
 
-    HomeFragment homeFragment = new HomeFragment();
-    NetworkMonitorFragment networkMonitorFragment = new NetworkMonitorFragment();
-    PermissionAnalyzerFragment permissionAnalyzerFragment = new PermissionAnalyzerFragment();
-    SettingsFragment settingsFragment = new SettingsFragment();
+    private HomeFragment homeFragment = new HomeFragment();
+    private NetworkMonitorFragment networkMonitorFragment = new NetworkMonitorFragment();
+    private PermissionAnalyzerFragment permissionAnalyzerFragment = new PermissionAnalyzerFragment();
+    private SettingsFragment settingsFragment = new SettingsFragment();
+
+    private TextView headerTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Header-Referenz
+        headerTitle = findViewById(R.id.headerTitle);
+
+        // Bottom Navigation und Fragment-Initialisierung
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-        getSupportFragmentManager().beginTransaction().replace(R.id.container, homeFragment).commit();
+        loadFragment(homeFragment, "Home");
 
         bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.home:
-                        getSupportFragmentManager().beginTransaction().replace(R.id.container, homeFragment).commit();
+                        loadFragment(homeFragment, "Home");
                         return true;
                     case R.id.network_monitor:
-                        getSupportFragmentManager().beginTransaction().replace(R.id.container, networkMonitorFragment).commit();
+                        loadFragment(networkMonitorFragment, "Network Monitor");
                         return true;
                     case R.id.permission_analyzer:
-                        getSupportFragmentManager().beginTransaction().replace(R.id.container, permissionAnalyzerFragment).commit();
+                        loadFragment(permissionAnalyzerFragment, "Permission Analyzer");
                         return true;
                     case R.id.settings:
-                        getSupportFragmentManager().beginTransaction().replace(R.id.container, settingsFragment).commit();
+                        loadFragment(settingsFragment, "Settings");
                         return true;
                 }
                 return false;
@@ -59,6 +66,19 @@ public class MainActivity extends AppCompatActivity {
         if (firstRun) {
             showPermissionSetupDialog();
             sharedPreferences.edit().putBoolean(KEY_FIRST_RUN, false).apply();
+        }
+    }
+
+    private void loadFragment(androidx.fragment.app.Fragment fragment, String title) {
+        // Fragment wechseln
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, fragment)
+                .commit();
+
+        // Header-Titel aktualisieren
+        if (headerTitle != null) {
+            headerTitle.setText(title);
         }
     }
 

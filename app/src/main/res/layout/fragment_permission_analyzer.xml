@@ -3,21 +3,10 @@
     android:layout_height="match_parent"
     android:padding="8dp">
 
-    <TextView
-        android:id="@+id/permissionsTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Permission Analyzer"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="16dp" />
-
     <ListView
         android:id="@+id/permissionsListView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/permissionsTitle"
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp" />
 </RelativeLayout>
